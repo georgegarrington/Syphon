@@ -1,0 +1,12 @@
+subscribe
+	onPassed 1000 Tick ?<< pred
+	onKeyPress UpArrow PlayerOneUp ?<< pred
+	onKeyPress DownArrow PlayerOneDown ?<< pred
+	onKeyRelease UpArrow PlayerOneRelease ?<< pred
+	onKeyRelease DownArrow PlayerOneRelease ?<< pred
+	onKeyPress 'w' PlayerTwoUp ?<< pred
+	onKeyPress 's' PlayerTwoDown ?<< pred
+	onKeyPress 'w' PlayerTwoRelease ?<< pred
+	onKeyPress 's' PlayerTwoRelease ?<< pred
+	where
+		pred = not state.paused

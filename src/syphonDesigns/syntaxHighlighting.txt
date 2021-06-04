@@ -1,0 +1,12 @@
+THE COLOUR CODES:
+
+markup.heading.syphon : green
+storage.type.syphon : italic blue
+variable.other.syphon : white I think?
+constant.numeric.syphon : purple
+keyword.control.syphon : red
+string.quoted.double.syphon : pale yellow
+constant.character.escape.syphon : purple
+comment.syphon : grey
+keyword.operator.syphon : red
+invalid.deprecated.syphon : orange

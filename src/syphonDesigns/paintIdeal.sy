@@ -1,0 +1,46 @@
+type State = 
+	{
+	dragging :: Bool,
+	strokes :: [Stroke],
+	undidStrokes :: [Stroke]
+	}
+
+type Stroke = Stroke Color [(Int, Int)]
+
+--type Shape = Rectangle Color Int Int | Oval Color Int Int | Stroke Color [(Int, Int)] | Line Color Int Int 
+type Event = Dummy | Clear | MouseClicked | MouseReleased | PixelEntered Int Int | ColorChanged Color
+type Color = Black | Red | Purple | Blue | Green | Yellow | White | FromHex String
+
+init :: State
+init = State False [emptyStroke Black] []
+
+emptyStroke :: Color -> Stroke
+emptyStroke = Stroke c []
+
+update :: State -> Event -> State
+update s e = match e with
+	Dummy -> s
+	Clear -> init
+	MouseClicked -> {s | dragging = True}
+	MouseReleased -> {s | dragging = False, strokes = handleRelease s.strokes}
+	ColorChanged c -> {s | strokes = updateColor (head s.strokes) c:drop 1 s.strokes}
+	PixelEntered y x -> cond
+		| s.dragging -> {s | strokes = addPointToStrokes s.strokes y x}
+		| otherwise -> s
+	where
+		handleRelease ((Stroke c tups):strokes) = emptyStroke c:Stroke c tups:strokes
+		addPointToStrokes (Stroke c tups:strokes) y x = (Stroke c ((y,x):tups)):strokes
+		updateColor (Stroke _ tup) c = Stroke c tup
+
+view :: State -> Widget
+view s = Column []<<
+	Canvas $<<
+		500
+		500
+		\_ _ -> MouseClicked
+		\_ _ -> MouseReleased
+		\y x -> if s.dragging then PixelEntered y x else Dummy
+		s.strokes
+	Row $ (map mkColorButton [Black, Red, Purple, Blue, Green, Yellow]) ++ [Button "X" (ColorChanged White)]
+	where
+		mkColorButton c = Button "colourButton" (ColorChanged c)

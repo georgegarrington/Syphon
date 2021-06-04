@@ -1,0 +1,53 @@
+type State = {
+	--Each cell is Nothing if blank, or Just Nought/Cross if cell is played
+	grid :: [[Maybe Player]]
+	currentPlayer :: Player
+	winningLine :: [(Int, Int)]
+}
+
+type Player = Nought | Cross
+
+type Event = Reset | CellPressed Int Int
+
+{-
+repeat :: Int -> a -> [a]
+repeat 0 _ = []
+repeat n x = x:repeat (n - 1) x
+-}
+
+--Will produce a 3x3 grid of Nothing
+init :: State
+init = State (repeat 3 (repeat 3 Nothing)) Cross Nothing
+
+update :: State -> Event -> State
+update s e = match e with 
+	Reset -> init
+	--First check if the cell is vacant
+	CellPressed x y -> cond
+		--Once the cell has been marked, check now whether or not there is a winner
+		| index2D s.grid y x == Nothing -> checkWinner $ markPlayer s x y
+		| otherwise = s
+	where
+		{-
+		All the potential lines that could contain winners, so this is a list
+		of list of cell contents where a winner can be determined if all 
+		elements in the list are the same
+		-}
+		potentialLines = 
+			[(0,0),(1,1),(2,2)]:
+			[(0,2),(1,1),(2,0)]:
+			(map (\x -> [(x,y) | y <- [0..2]]) [0..2]) ++
+			(map (\y -> [(x,y) | x <- [0..2]]) [0..2])
+
+markPlayer :: State -> Int -> Int -> State
+markPlayer s x y = {s | grid = replace2D s.grid y x (Just s.currentPlayer)}
+
+checkWinner :: State -> [[(Int, Int)]] -> State
+checkWinner s [] = match s.currentPlayer with
+	Nought -> {s | currentPlayer = Cross}
+	Cross -> {s | currentPlayer = Nought}
+
+checkWinner s (((fstX,fstY):otherTwo):lines)
+	| and $ map (\(x,y) -> (index2D s.grid y x) == (index2D s.grid gstY fstX)) line = 
+		{s | winningLine = ((fstX,fstY):otherTwo)}
+	| otherwise = checkWinner s lines

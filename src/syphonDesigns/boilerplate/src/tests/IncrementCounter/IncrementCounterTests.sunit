@@ -1,0 +1,13 @@
+#update
+
+	args: 0 Dec 
+	shouldReturn: (-1)
+
+	args: 0 Inc 
+	shouldReturn: 1
+
+	args: (-1) Inc 
+	shouldReturn: 0
+
+	args: 1 Inc 
+	shouldReturn: 2

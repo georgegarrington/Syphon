@@ -1,0 +1,52 @@
+type State = 
+	{
+	currentStr :: String,
+	undoStack :: [String],
+	redoStack :: [String]
+	}
+
+--When saving, simply overwrite the current file
+--Loading should fail if the file does not exist
+type Event = TextChanged String | Save | Load String | Undo | Redo
+
+init :: State 
+init = State "" [] []
+
+update :: State -> Event -> State
+update s e = match e with
+	TextChanged newStr -> {s | currentStr = newStr, undoStack = addToStack s.currentStr s.undoStack}
+	Undo -> {s | currentStr = takeFromStack s.currentStr s.undoStack, undoStack = safeDrop 1 s.undoStack,
+		redoStack = addToStack currentStr s.redoStack}
+	Redo -> {s | currentStr = takeFromStack s.currentStr s.redoStack, redoStack = safeDrop 1 s.redoStack,
+		undoStack = addToStack currentStr s.undoStack}
+
+safeDrop :: Int -> [a] -> [a]
+safeDrop n xs = cond
+	| n > length xs -> xs
+	| otherwise -> drop n xs
+
+--Take the current string and a stack. If the stack is empty then just return the current string
+--, if the current stack is not empty then take from the head of the stack
+takeFromStack :: a -> [a] -> a
+takeFromStack current [] = current
+takeFromStack _ (x:_) = x
+
+--Limit the undo and redo stack sizes to say 20 so that space complexity is feasible
+addToStack :: a -> [a] -> [a]
+addToStack str stack = cond
+	| length stack > 20 = str:dropFromEnd 1 stack --Ast the stack grows, drop the oldest parts
+	| otherwise = str:stack
+	where
+		dropFromEnd n xs = cond
+			| n > length xs -> xs
+			| otherwise -> drop (length xs - n) xs
+
+view :: State -> Widget
+view s = Column []<<
+	Row []<<
+		SaveIcon
+		Text "hello I'm at the top"
+		Button "Undo" Undo
+		Button "Redo" Redo
+	Editor s.currentStr 10 20 TextChanged
+	Text "hello I'm at the bottom"

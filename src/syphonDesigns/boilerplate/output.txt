@@ -1,0 +1,1 @@
+This is some text I want to save into the file "output.txt"

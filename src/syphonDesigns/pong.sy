@@ -1,0 +1,197 @@
+module Pong where
+
+import Colour as C
+
+import System.Time
+import System.Keyboard as K
+
+--Some static constants
+width = 900
+height = 500
+ballDiam = 60
+--For now, the ball speed is essentially the number of pixels a ball will shift by on each tick
+ballSpeed = 5
+--Again same as the ball
+paddleSpeed = 4
+paddleWidth = 40
+paddleHeight = 150
+
+type State = {
+	ballY :: Int
+	ballX :: Int
+	ballDir :: Dir
+	leftScore :: Int
+	rightScore :: Int
+	--The y coordinate of the top of the paddle
+	leftPaddleTop :: Int 
+	leftPaddleState :: PaddleState
+	rightPaddleTop :: Int
+	rightPaddleState :: PaddleState
+	--Every time a new random value is used, replace the new random generator here
+	randomGen :: RandomGenerator 
+}
+
+--The ball can only travel diagonally and always bounces of at a 90 degree angle
+type Dir = NE | SE | SW | NW
+
+--Changed depending on whether the left/right player is pressing their respective up/down buttons
+type PaddleState = Stationary | GoingUp | GoingDown
+
+type Event
+	= Tick --Frequency will be determined by the subscription
+	| LeftPlayerUp
+	| LeftPlayerDown
+	| LeftPlayerRelease
+	| RightPlayerUp
+	| RightPlayerDown
+	| RightPlayerRelease
+
+
+{-
+Unlike in my previous example using time, this is quite a high performance
+application therefore the "updating" of the GUI needs to be quite frequent
+which is determined by how often a tick message is received, start off with 100
+milliseconds and see if that works
+-}
+subscribe :: [Sub]
+subscribe = [] <- 
+	--Subscription generaing helper function from the time module
+	Time.onPassed 100 Tick
+	--Subscribtion generating helper functions from the keyboard module
+	K.onPressed (K.Regular 'w') LeftPlayerUp
+	K.onReleased (K.Regular 'w') LeftPlayerReleased
+	K.onPressed (K.Regular 's') LeftPlayerDown
+	K.onReleased (K.Regular 's') LeftPlayerReleased
+	K.onPressed K.UpArrow RightPlayerUp
+	K.onReleased K.UpArrow RightPlayerReleased
+	K.onPressed K.DownArrow RightPlayerDown
+	K.onReleased K.DownArrow RightPlayerReleased
+
+update :: State -> Event -> State
+update s e = match e with
+	Tick -> handleTick s 
+	LeftPlayerUpPress -> {s | leftPaddleState = GoingUp}
+	LeftPlayerDownPress -> {s | leftPaddleState = GoingDown}
+	LeftPlayerRelease -> {s | leftPaddleState = Stationary}
+	RightPlayerUpPress -> {s | rightPaddleState = GoingUp}
+	RightPlayerDownPress -> {s | rightPaddleState = GoingDown}
+	RightPlayerRelease -> {s | rightPaddleState = Stationary}
+
+handleTick :: State -> State 
+handleTick s = cond
+	--Leave randomness out for now, if the ball is detected as being out of bounds of one of the sides then a point is scored
+	| newBallX < 0 -> {s | rightScore = s.rightScore + 1, ballY = width / 2, ballX = height / 2}
+	| newBallX > (width - ballDiam) -> {s | leftScore = s.leftScore + 1, ballY = width / 2, ballX = height / 2}
+
+	--If the ball is detected as intersecting one of the paddles then handle a bounce off one of the paddles
+	| intersectingLeft newLeftPaddleTop newBallY newBallX -> handleLeftPaddleBounce s newBallY newLeftPaddleTop newRightPaddleTop
+	| intersectingRight newRightPaddleTop newBallY newBallX -> handleRightPaddleBounce s newBallY newLeftPaddleTop newRightPaddleTop
+
+	--Ball was not detected at the sides therefore it may be at the top or bottom
+	| newBallY < 0 -> handleTopBounce s newBallX newLeftPaddleTop newRightPaddleTop
+	| newBallY > height - ballDiam -> handleBottomBounce s newBallX newLeftPaddleTop newRightPaddleTop
+
+	--Ball is not bouncing off any of the sides or top/bottom therefore we can use all the new values as is
+	| otherwise -> {s | leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop, ballY = newBallY, ballX = newBallX}
+
+	where
+		newLeftPaddleTop = match s.leftPaddleState with
+			GoingUp -> cond
+				| (s.leftPaddleTop - paddleSpeed) < 0 -> 0
+				| otherwise -> s.leftPaddleTop - paddleSpeed
+			GoingDown -> cond
+				| (s.leftPaddleTop + paddleSpeed) > (height - paddleHeight) -> height - paddleHeight
+				| otherwise -> s.leftPaddleTop + paddleSpeed
+			Stationary -> s.leftPaddleTop
+		newRightPaddleTop = match s.rightPaddleState with
+			GoingUp -> cond
+				| (s.rightPaddleTop - paddleSpeed) < 0 -> 0
+				| otherwise -> s.rightPaddleTop - paddleSpeed
+			GoingDown -> cond
+				| (s.rightPaddleTop + paddleSpeed) > (height - paddleHeight) -> height - paddleHeight
+				| otherwise -> s.rightPaddleTop + paddleSpeed
+			Stationary -> s.rightPaddleTop
+		--Ball may be out of bounds, need to check
+		newBallY = match s.ballDir with
+			NE -> s.ballY - ballSpeed
+			NW -> s.ballY - ballSpeed
+			_ -> s.ballY + ballSpeed
+		newBallX = match s.ballDir with 
+			NE -> s.ballX + ballSpeed 
+			SE -> s.ballX + ballSpeed
+			_ -> s.ballX - ballSpeed
+
+--Given left paddle top and ball y and x, is it intersecting the left paddle?
+intersectingLeft :: Int -> Int -> Int -> Bool
+intersectingLeft paddleTop ballY ballX = (&&) $<
+	(ballY >= paddleTop) && (ballY <= (paddleTop + paddleHeight)) 
+	ballX <= paddleWidth
+
+--Given right paddle top and ball y and x, is it intersecting the right paddle?
+intersectingRight :: Int -> Int -> Int -> Bool
+intersectingRight paddleTop ballY ballX = (&&) $<
+	(ballY >= paddleTop) && (ballY <= (paddleTop + paddleHeight)
+	(ballX >= (width - paddleWidth - ballDiam))
+
+handleRightPaddleBounce :: State -> Int -> Int -> State
+handleRightPaddleBounce s newBallY newLeftPaddleTop newRightPaddleTop = match s.ballDir with
+	SE -> {s | ballDir = SW, ballY = newBallY, ballX = width - paddleWidth - ballDiam, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+	NE -> {s | ballDir = NW, ballY = newBallY, ballX = width - paddleWidth - ballDiam, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+
+--Unfinished
+handleLeftPaddleBounce :: State -> Int -> Int ->State
+handleLeftPaddleBounce s newBallY newLeftPaddleTop newRightPaddleTop = match s.ballDir with
+	SW -> {s | ballDir = SE}
+	NW -> {s | ballDir = NE}
+
+handleTopBounce :: State -> Int -> Int -> Int -> State
+handleTopBounce s newBallX newLeftPaddleTop newRightPaddleTop = match s.ballDir with
+	NE -> {s | ballDir = SE, ballY = 0, ballX = newBallX, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+	NW -> {s | ballDir = SW, ballY = 0, ballX = newBallX, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+
+handleBottomBounce :: State -> Int -> Int -> Int -> State
+handleBottomBounce s newBallX newLeftPaddleTop newRightPaddleTop
+	SE -> {s | ballDir = NE, ballY = height - ballDiam, ballX = newBallX, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+	SW -> {s | ballDir = NW, ballY = height - ballDiam, ballX = newBallX, leftPaddleTop = newLeftPaddleTop, rightPaddleTop = newRightPaddleTop}
+
+--The view definition itself is relatively simple here, the difficulty lies in an update function
+view :: State -> Widget
+view s = Column [] <-
+	Row |{alignment = equal, background = C.grey}| [] <-
+		mkScoreDisplay "Player 1" s.leftScore
+		mkScoreDisplay "Player 2" s.rightScore
+	Canvas |{background = C.black, mode = shapes}| [] <-
+		Rectangle |{colour = C.white}| s.leftPaddleTop 0 paddleHeight paddleWidth
+		Circle |{colour = C.white}| s.ballY s.ballX ballDiam
+		Rectangle |{colour = C.white} s.rightPaddleTop (width - paddleWidth) paddleHeight paddleWidth
+	where
+		mkScoreDisplay name score = Text |{color = C.red}| (name ++ " score: " ++ score)
+
+{-
+
+Think it will be very useful for there to be a library defined "shape" data type
+which can be used by the canvas, this is all that pong needs
+
+type Shape
+	= Circle ?? Int
+	| Rectangle ?? Int Int
+	| ... (other constructors)
+
+-}
+
+{-
+
+possible exerpt of definitions of keyboard module helper functions and data types
+
+onPressed :: KeyboardKey -> Event -> Sub
+
+onReleased :: KeyboardKey -> Event -> Sub
+
+data KeyboardKey
+	= UpArrow
+	| DownArrow
+	| RightArrow
+	| LeftArrow
+	| Regular Char
+
+-}

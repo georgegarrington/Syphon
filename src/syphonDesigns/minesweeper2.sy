@@ -1,0 +1,36 @@
+type State = 
+	{
+		board :: Board,
+		finished :: Bool
+	}
+
+type CellContents = Bomb | Clear
+type CellState = Flagged | Revealed | Hidden
+
+type Event = Reset | Click Int Int | Flag Int Int
+
+alias Pos = (Int, Int)
+alias Board = [(Pos,CellContents,CellState)]
+
+--For now assume the board has a dimension of less than 20
+genNeighbours :: Pos -> [Pos]
+genNeighbours (y,x) = pipeline
+	[(-1,-1),(-1,0),(-1,1),(0,-1),(0,0),(0,1)(1,-1),(1,0),(1,1)]
+	map ((y2,x2) -> (y + y2, x + x2))
+	filter ((y,x) -> y > 0 && y < 20 && x > 0 && x < 20)
+
+expose :: Pos -> Board -> Board
+expose pos board = 
+
+checkGameLost :: Board -> Bool
+checkGameLost [] = False
+checkGameLost ((_,Bomb,Revealed):cells) = True
+checkGameLost (_:cells) = checkGameLost cells
+
+view :: State -> Widget
+view s = Column []<<
+	Button "Reset" Reset
+	SVG $<< 
+		#{bgColor = LightGrey} 
+		600 
+		600

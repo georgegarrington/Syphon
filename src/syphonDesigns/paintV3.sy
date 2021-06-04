@@ -1,0 +1,56 @@
+--Static literal constants do not need a type signature
+weight = 3
+
+--The strokes field must always have at least one stroke in it which points are added to
+type State = {
+	dragging :: Bool,
+	color :: Color, --The currently selected color
+	strokes :: [Shape]
+	}
+
+type Event 
+	= PixelEntered Int Int 
+	| MousePressed 
+	| MouseReleased 
+	| ColorChanged Color 
+	| Dummy
+	| Clear
+	| Undo
+
+emptyStroke :: Color -> Shape
+emptyStroke c = Stroke c weight []
+
+init :: State
+init = State False Black [emptyStroke Black] []
+
+update :: State -> Event -> State
+update s e = match e with
+	PixelEntered y x -> {s | strokes = addPointToStrokes y x s.strokes}
+	MousePressed -> {s | dragging = True}
+	MouseReleased -> {s | dragging = False, strokes = emptyStroke s.color:s.strokes}
+	ColorChanged c -> {s | strokes = updateColor c s.strokes, color = c}
+	Clear -> init
+	Undo -> {s | strokes = safeDrop s.strokes}
+	Dummy -> s
+	where
+		addPointToStrokes y x ((Stroke c weight tups):strokes) = 
+			((Stroke c weight ((y,x):tups)):strokes)  
+		updateColor c ((Stroke _ weight tups):strokes) = Stroke c weight tups:strokes
+		safeDrop list = match list with
+			[empty] -> [empty] --always ensure there is at least one empty stroke
+			empty:_:rest -> empty:rest
+
+view :: State -> Widget
+view s = Column []<<
+	Row $ (++)
+		map mkColorButton [Black, Red, Purple, Blue, Green, Yellow, Pink, Orange, White]
+		[txtButton "Clear" Clear, txtButton "Undo" Undo]
+	Canvas $<<
+		#{onMouseMoved = if s.dragging then PixelEntered else \_ _ -> Dummy, 
+			onMousePressed = \_ _ -> MousePressed, onMouseReleased = \_ _ -> MouseReleased}
+		700 
+		500 
+		s.strokes
+	where
+		mkColorButton c = Button #{bgColor = c, dim = (50,50)} DummyWidget (ColorChanged c)
+		txtButton text event = Button #{dim = (100,50)} (Text text) event

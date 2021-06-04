@@ -1,0 +1,43 @@
+type State = {
+	paused :: Bool,
+	counter :: Int,
+	coords :: (Int,Int),
+	paddleState :: PaddleState
+	}
+
+type Event = MouseMoved Int Int | TogglePause | Tick | UpPressed | DownPressed | Released
+type PaddleState = Stationary | GoingUp | GoingDown
+
+--Need to add static analysis to make sure they are valid subscription functions
+@subscribe
+	onMouseMoved MouseMoved ?<< not state.paused
+	onTimePassed 100 Tick ?<< not state.paused
+	onKeyPressed UpArrow UpPressed ?<< not state.paused
+	onKeyPressed DownArrow DownPressed ?<< not state.paused
+	onKeyReleased UpArrow Released ?<< not state.paused
+	onKeyReleased DownArrow Released ?<< not state.paused 
+
+init :: State
+init = State False 0 (50,50) Stationary
+
+update :: State -> Event -> State
+update s e = match e with
+	MouseMoved y x -> {s | coords = (y,x)}
+	Tick -> {s | counter = s.counter + 1}
+	TogglePause -> {s | paused = not s.paused}
+	UpPressed -> {s | paddleState = GoingUp}
+	DownPressed -> {s | paddleState = GoingDown}
+	Released -> {s | paddleState = Stationary}
+
+view :: State -> Widget
+view s = Column []<<
+	Button (Text "Pause") TogglePause
+	Text $ concatStrs ["The mouse coordinates are: ", toString $ fst s.coords, ".", toString $ snd s.coords]
+	Text $ concatStrs ["The counter value is: ", toString $ s.counter]
+	Text $ append "The paddle state is: " (showPaddleState s.paddleState)
+	where
+		concatStrs strs = reduce (\s1 s2 -> append s1 s2) strs
+		showPaddleState st = match st with
+			GoingUp -> "GoingUp"
+			Stationary -> "Stationary"
+			GoingDown -> "GoingDown"

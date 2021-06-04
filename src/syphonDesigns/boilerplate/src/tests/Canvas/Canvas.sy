@@ -1,0 +1,38 @@
+weight = 3
+
+--The strokes field must always have at least one stroke in it which points are added to
+type State = {
+	dragging :: Bool,
+	color :: Color, --The currently selected color
+	strokes :: [Shape],
+	undidStrokes :: [Shape]
+	}
+
+type Event 
+	= PixelEntered Int Int 
+	| MousePressed 
+	| MouseReleased 
+	| ColorChanged Color 
+	| Dummy
+	| Clear
+	| Undo
+
+emptyStroke :: Color -> Shape
+emptyStroke c = Stroke c weight []
+
+update :: State -> Event -> State
+update s e = match e with
+	PixelEntered y x -> {s | strokes = addPointToStrokes y x s.strokes}
+	MousePressed -> {s | dragging = True}
+	MouseReleased -> {s | dragging = False, strokes = emptyStroke s.color:s.strokes}
+	ColorChanged c -> {s | strokes = updateColor c s.strokes, color = c}
+	Clear -> init
+	Undo -> {s | strokes = safeDrop s.strokes}
+	Dummy -> s
+	where
+		addPointToStrokes y x ((Stroke c weight tups):strokes) = 
+			((Stroke c weight ((y,x):tups)):strokes)  
+		updateColor c ((Stroke _ weight tups):strokes) = Stroke c weight tups:strokes
+		safeDrop list = match list with
+			[empty] -> [empty] --always ensure there is at least one empty stroke
+			empty:_:rest -> empty:rest

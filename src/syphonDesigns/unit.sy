@@ -1,0 +1,43 @@
+--Whenever a function returns undefined then you know it failed!
+
+#length
+	[] shouldOutput 0
+	[1] shouldOutput 1
+	[1,2] shouldOutput 2
+
+{-
+
+nSucceeded = 0
+nFailed = 0
+
+console.log("Running ", 3, " tests for length")
+sep()
+console.log("1: input = [[]], expected = 0, actual = ", prettyPrint(result))
+console.log("2: input = [[1]], expected = 1, actual = ", prettyPrint(result))
+conso
+
+[{input : <obj>, expected: }]
+
+{name : length, cases : []}
+
+for(caseSet of caseSetLists){
+
+	console.log("Running")
+
+	for(case of caseSet.cases){
+
+	}
+}
+
+-}
+
+#drop
+	1, [] shouldFail
+	1, [1] shouldOutput []
+	0, [1] shouldOutput [1]
+
+#take
+	[], 1 shouldFail
+	[1], 1 shouldOutput [1]
+	[1,2], 1 shouldOutput [1]
+	[1,2], 2 shouldOutput [1,2]

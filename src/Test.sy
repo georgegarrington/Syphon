@@ -1,0 +1,166 @@
+asset flag = ""
+asset mine = ""
+asset explosion = ""
+
+type State = {
+	grid :: [[CellState]],
+	bombCoords :: [(Int,Int)],
+	gameState :: GameState,
+	gen :: RandomGen
+	}
+
+type CellState = Hidden | Revealed Int | Flagged | Exploded
+type GameState = Playing | Won | Lost | Loading
+type Event = LeftClick Int Int | RightClick Int Int | Reset | SeedRecieved Int | Dummy
+
+--Start with a random generator from the seed 0, and then replace it with a new random 
+--generator with the seed recieved from IO to make it truly random
+init :: State
+init = State (replicate2D 10 Hidden) [] Loading (mkRandomGen 0)
+
+initEffect :: Effect
+initEffect = requestSeed SeedRecieved
+
+update :: State -> Event -> State
+update s e = match e with
+	LeftClick y x -> match index2D s.grid y x with
+		Hidden -> match bombOrCount s.bombCoords (y,x) with
+			Nothing -> {s | grid = replace2D s.grid y x Exploded, gameState = Lost}
+			Just count -> let
+				newGrid = replace2D s.grid y x $ Revealed count
+				in
+				cond
+					| checkWon -> {s | grid = newGrid, gameState = Won}
+					| otherwise -> {s | grid = newGrid}
+	where
+		isRevealed cellState = match cellState with
+			Revealed _ -> True
+			_ -> False
+		checkWon = pipeline
+			s.grid
+			filter2D isRevealed
+			\_ -> True
+
+{-
+
+pipeline
+	s.grid
+	filter2D $ \cell -> match cell with
+		Revealed -> True
+		_ -> False
+	concat
+	length
+	\result -> result == 90
+
+-}
+
+{-}
+update :: State -> Event -> State
+update s e = match e with
+	LeftClick y x -> match index2D s.grid y x with
+		Hidden -> match bombOrCount s.bombCoords y x with
+			Just count -> let 
+				newGrid = replace2D s.grid y x $ Revealed count
+				in 
+				cond
+					| checkWon newGrid -> {s | grid = newGrid, gameState = Won}
+					| otherwise -> {s | grid = newGrid}
+			Nothing -> {s | grid = replace2D s.grid y x Exploded, gameState = Lost}
+		Flagged -> s
+		Revealed -> s
+	RightClick y x -> match index2D s.grid y x with
+		Hidden -> {s | grid  =replace2D s.grid y x Flagged}
+		Flagged -> {s | grid = replace2D s.grid y x Hidden}
+		Revealed -> s
+	Dummy -> s
+	Reset -> let
+		[newBombCoords, newGen] = genBombCoords s.gen 10
+		newGrid = replicate2D 10 Hidden
+		in
+		{s | gen = newGen, bombCoords = newBombCoords, gameState = Playing, grid = newGrid}
+	SeedRecieved seed -> let
+		initGen = mkRandomGen seed
+		[rndmCoords, gen1] = genBombCoords initGen 10
+		in
+		{s | gen = gen1, bombCoords = rndmCoords, gameState = Playing}
+	where
+		genBombCoords gen count = genBombCoordsRec gen count []
+		checkWon = pipeline
+			s.grid
+			filter2D $ \cell -> match cell with
+				Revealed -> True
+				_ -> False
+			concat
+			length
+			\result -> result == 90
+-}
+
+{-
+For now Syphon does not support untyped recursion, so to make a recursive auxilliary function
+we must explicitly declare it with a type signature
+-}
+
+genBombCoordsRec :: RandomGen -> Int -> [(Int, Int)] -> ([(Int,Int)], RandomGen)
+genBombCoordsRec gen count acc
+	| count == 0 = (acc,gen) --We have built up the number of bomb coordinates needed so return
+	| otherwise = let
+		(y,gen1) = randomGenBetween 0 9 gen
+		(x,gen2) = randomGenBetween 0 9 gen1
+		ranCoord = (y,x)
+		in
+		cond
+			| containsCoord acc ranCoord -> genBombCoordsRec gen2 count acc 
+			| otherwise -> genBombCoordsRec gen2 (count - 1) (ranCoord:acc)
+
+
+containsCoord :: [(Int,Int)] -> (Int,Int) -> Bool
+containsCoord [] _ = False
+containsCoord ((y1,x1):coords) (y2,x2)
+	| y1 == y2 && x1 == x2 = True
+	| otherwise = containsCoord coords (y2,x2)
+
+bombOrCount :: [(Int,Int)] -> (Int, Int) -> Maybe Int
+bombOrCount [] _ = Just 0 --Looked through all bomb coordinates and none match so 0 surrounding bombs
+bombOrCount ((y1,x1):coords) (y2,x2)
+	| diffY == 0 && diffX == 0 = Nothing --0 difference means the coordinate is a bomb!
+	| diffY <= 1 && diffX <= 1 = plusMaybe 1 $ bombOrCount coords (y2,x2)
+	| otherwise = bombOrCount coords (y2,x2)
+	where
+		diffY = abs $ y1 - y2
+		diffX = abs $ x1 - x2
+		plusMaybe x maybe = match maybe with
+			Nothing -> Nothing
+			Just y -> Just $ x + y
+
+view :: State -> Widget
+view s = Column $ (:) $<<
+	Row [Button (Text "Reset") Reset]
+	map (\y -> Row $ makeCellList s.gameState y 0 (s.grid !! y) s.bombCoords) [0..9]
+
+makeCellList :: GameState -> Int -> Int -> [CellState] -> [(Int,Int)] -> [Widget]
+makeCellList _ _ _ [] _ = [] --No more cell states to look at so we have created all buttons required
+makeCellList gameState y x (cellState:cellStates) bombCoords = (:) $<<
+	match gameState with
+		Loading -> Graphic #{dim = (30,30), bgColor = Blue} TimerGraphic
+		Won -> cond
+			| containsCoord bombCoords (y,x) -> Graphic #{dim = (30,30), bgColor = Green} mine
+			| otherwise -> Panel #{dim = (30,30), bgColor = Green}
+		Lost -> cond
+			| isExploded cellState -> Graphic #{dim = (30,30), bgColor = Red} explosion
+			| containsCoord bombCoords (y,x) -> Graphic #{dim = (30,30), bgColor = Red} mine
+			| otherwise -> Panel #{dim = (30,30), bgColor = Red}
+		Playing -> match cellState with --Don't need an explode case as game will be lost as soon as explosion occurs
+			Hidden -> Button $<<
+				#{rounding = 0, onRightClick = RightClick y x, dim = (30,30), bgColor = DarkGrey} 
+				DummyWidget
+				LeftClick y x
+			Flagged -> Button $<<
+				#{rounding = 0, onRightClick = RightClick y x, dim = (30,30), bgColor = LightGrey}
+				Graphic flag
+				Dummy
+			Revealed count -> Container #{dim = (30,30), bgColor = LightGrey} $ Text $ toString count
+	makeCellList gameState y (x + 1) cellStates bombCoords
+	where
+		isExploded cellSt = match cellSt with
+			Exploded -> True
+			_ -> False

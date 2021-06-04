@@ -1,0 +1,99 @@
+append :: [a] -> [a] -> [a]
+append [] ys = ys
+append (x:xs) ys = x:append xs ys
+
+map :: (a -> b) -> [a] -> [b]
+map _ [] = []
+map f (x:xs) = (f x):map f xs
+
+take :: Int -> [a] -> [a]
+take 0 xs = []
+take n (x:xs)
+	| n < 0 = error "take called with a negative amount!"
+	| n > length(xs) = error "tried to take too much from a list!"
+	| otherwise = x:take (n - 1) xs
+
+tail :: [a] -> [a]
+tail (x:xs) = xs
+tail [] = error "tail called on an empty list!"
+
+head :: [a] -> a
+head (x:xs) = x
+head [] = error "tried to get head of an empty list!"
+
+isEmpty :: [a] -> Bool
+isEmpty [] = True
+isEmpty _ = False
+
+filter :: (a -> Bool) -> [a] -> [a]
+filter _ [] = []
+filter pred (x:xs)
+	| pred x = x:filter pred xs
+	| otherwise = filter pred xs
+
+--Replace index i in the list with the value x
+replace :: [a] -> Int -> a -> [a]
+replace xs i x
+	| isEmpty xs = error "replace called on an empty list!"
+	| i < 0 = error "replace called with a negative index!"
+	| i > (length xs) = error "illegal index in replace, too large!"
+	| otherwise = (take i xs) ++ [x] ++ (drop (i + 1) xs)
+
+map2D :: (a -> b) -> [[a]] -> [[b]]
+map2D f matrix = map (map f) matrix
+
+replace2D :: [[a]] -> Int -> Int -> a -> [[a]]
+replace2D list2D y x elem
+	| isEmpty list2D = error "replace2D called with an empty matrix!"
+	| y < 0 || x < 0 = error "replace2D called with a negative index!"
+	| y >= (length list2D) = error "illegal y index in replace2D, too large!"
+	| x >= (length (list2D !! y)) = error "illegal x index in replace2D, too large!"
+	| otherwise = (take y list2D) ++ [replace (list2D !! y) x elem] ++ (drop (y + 1) list2D)
+
+index2D :: [[a]] -> Int -> Int -> a
+index2D list2D y x 
+	| isEmpty list2D = error "index2D called with an empty matrix!"
+	| y < 0 || x < 0 = error "index2D called with a negative index!"
+	| y >= (length list2D) = error "illegal y index in index2D, too large!"
+	| x >= (length $ list2D !! y) = error "illegal x index in index2D, too large!"
+	| otherwise = list2D !! y !! x
+
+filter2D :: (a -> Bool) -> [[a]] -> [[a]]
+filter2D pred matrix = map (filter pred) matrix
+
+and :: [Bool] -> Bool
+and [] = True
+and (x:xs) = x && (and xs)
+
+or :: [Bool] -> Bool
+or [] = False
+or (x:xs) = x || (or xs)
+
+allSame :: [Int] -> Bool
+allSame xs = and $ map (\x -> x == (head xs)) xs
+
+reduce :: (a -> a -> a) -> [a] -> a
+reduce _ [] = error "reduce called on an empty list!"
+reduce _ [x] = x
+reduce f (x1:x2:xs) = reduce f ((f x1 x2):xs)
+
+concat :: [[a]] -> [a]
+concat [] = []
+concat xss = reduce (++) xss
+
+replicate :: Int -> a -> [a]
+replicate n thing
+	| n == 0 = []
+	| n < 0 = error "replicate called with a negative amount!"
+	| otherwise = thing:replicate (n - 1) thing
+
+replicateGrid :: Int -> a -> [[a]]
+replicateGrid n thing = replicate n $ replicate n thing
+
+{-}
+drop :: Int -> [a] -> [a]
+drop 0 xs = xs
+drop n (x:xs)
+	| n < 0 = error "drop called with a negative index!"
+	| n < length (x:xs) = error "tried to drop too much from a list!"
+	| otherwise = drop (n - 1) xs -}

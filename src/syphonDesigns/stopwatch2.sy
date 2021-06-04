@@ -1,0 +1,28 @@
+type State = {
+	secs :: Int,
+	millis :: Int,
+	paused :: Bool
+	}
+
+type Event = Tick | TogglePause | Reset
+
+@subscribe
+	onTimePassed 10 Tick ?<< not state.paused
+
+init :: State
+init = 0 0 False
+
+update :: State -> Event -> State
+update s e = match e with
+	Tick -> cond
+		| s.millis == 99 -> {s | secs = s.secs + 1, millis = 0}
+		| otherwise -> {s | millis = s.millis + 1}
+	TogglePause -> {s | paused = not s.paused}
+	Reset -> init
+
+view :: State -> Widget
+view s = Column []<<
+	Container #{bgColor = Grey} $ Text $ append (toString s.secs) (toString s.millis)
+	Row []<<
+		Button (Text "Pause") TogglePause
+		Button (Text "Reset") Reset

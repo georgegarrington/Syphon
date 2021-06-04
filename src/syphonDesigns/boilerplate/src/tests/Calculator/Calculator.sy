@@ -1,0 +1,22 @@
+type State = 
+	{
+	display :: String,
+	operator :: Operator,
+	operand1 :: Int
+	}
+
+alias Operator = Int -> Int -> Int
+type Event = Clear | Eq | OpPress Operator | Digit Int
+
+--Use plus as a "dummy" opterator
+init :: State
+init = State "" (+) 0
+
+update :: State -> Event -> State
+update s e = match e with
+	Clear -> init
+	Eq -> State (calc s) (+) 0
+	OpPress op -> State "" op $ parseInt s.display
+	Digit i -> {s | display = append s.display (toString i)}
+	where
+		calc st = toString (st.operator st.operand1 (parseInt st.display))

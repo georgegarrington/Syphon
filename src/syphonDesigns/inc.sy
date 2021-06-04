@@ -1,0 +1,17 @@
+alias State = Int
+
+type Event = Inc | Dec
+
+init :: State
+init = 0
+
+update :: State -> Event -> State
+update s e = match e with
+	Inc -> s + 1
+	Dec -> s - 1
+
+view :: State -> Widget
+view s = Column []<<
+	Button (Text "+") Inc
+	Text (toString s)
+	Button (Text "-") Dec

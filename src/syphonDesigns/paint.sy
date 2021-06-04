@@ -1,0 +1,89 @@
+{-
+THIS CAN BE MASSIVELY IMPROVED AND MADE MORE EFFICIENT
+BY USING LISTS OF STROKES I.E. LISTS OF COORDINATE TUPLES
+INSTEAD OF A 2D LIST OF PIXELS, TRY IMPLEMENTING IT THAT WAY SOON
+IN A NEW FILE IT SHOUDL REQUIRE ONLY A TINY TINY BIT OF MODIFICATION
+OF THIS EXAMPLE, IF ANYTHING IT SHOULD MAKE IT ALOT SIMPLER!
+-}
+
+import GUI.Palette as C
+
+{-
+Lets assume for now that the color type imported from the Palette module is simply
+a type alias for a string at the moment
+-}
+
+type State = {
+	currentColor :: Color,
+	dragging :: Bool,
+	pixels :: [[Color]]
+}
+
+{-
+Assume that the canvas is only ever 500x500, the initial drawing colour 
+is black and every pixel in the canvas is initially white
+-}
+init :: State
+init = State C.black False (repeat 500 (repeat 500 C.white))  
+
+type Event = Clear | Dummy | MouseClicked | MouseReleased | ColorChanged Color | PixelEntered Int Int
+
+subscribe :: State -> [Sub]
+subscribe _ = [Mouse.onMoved ()]
+
+{-
+Mouse.onMoved takes as an argument a function that takes the x and
+y coordinates the mouse has moved to. As the canvas is at the top of 
+the GUI, clearly if the y coordinate of the mouse is greater than 500 
+then we know it is below the canvas so we can ignore it, the Dummy 
+data constructor can be used to represent nothing happening
+-}
+
+update :: State -> Event -> State
+update s e = match e with
+	Clear -> init 
+	Dummy -> s
+	MouseClicked -> {s | dragging = True}
+	MouseReleased -> {s | dragging = False}
+	ColorChanged c -> {s | currentColor = c}
+	PixelEntered y x -> conditional
+		| s.dragging -> {s | pixels = replace2D s.pixels y x s.currentColor}
+		| otherwise -> s
+
+-- ^^^ if the mouse is being dragged, then replace the x,y pixel value in the grid with the current pixel
+
+{-
+Canvas will take as argument a 2D list of Colour data types that represent the colour of
+each pixel in the canvas, and an optional data type where 2 of the fields are the onClick
+event message and the onRelease event message. 
+
+At the moment the eraser button simply displays "X" as some text so look into improving
+this so that it displays a graphic of an eraser in future
+-}
+view :: State -> Element
+view s = Column [] <-
+	Canvas MouseClicked MouseReleased (\y -> \x -> PixelEntered y x) s.pixels
+	Row ((map mkColorButton [C.black, C.red, C.purple, C.blue, C.green, C.yellow]) ++ (Button (ColorChanged C.white) (Text "X")))
+	where
+		mkColorButton color = Button (ColorChanged color) (Panel 20 20 color)
+
+{-
+Obviously this needs to be improved in future, but for now 
+canvas takes 3 event messages to send, one when it is clicked, 
+one when it is released, one also needs a function defined that will
+receive the mouse move coordinates as arguments and then will 
+send an event message (so that the event message can contain the 
+coordinates of where the mouse has moved to) and also the 2D grid of colours that represent
+the colours of the pixels on the canvas 
+
+Panel for now simply takes its x/y size and its background colour
+(again, obviously this is a trivial definition that needs to be improved
+in future)
+
+type Element 
+	= ...
+	| Canvas Event Event (Int -> Int -> Event) [[Color]]
+	| Panel Int Int Color
+	| ... 
+
+-}

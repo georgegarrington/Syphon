@@ -1,0 +1,42 @@
+type State = 
+	{
+	dragging :: Bool,
+	strokes :: [Shape],
+	undidStrokes :: [Shape]
+	}
+
+type Event = Dummy | Clear | MousePressed | MouseReleased | PixelEntered Int Int | ColorChanged Color
+
+init :: State
+init = State False [emptyStroke Black] []
+
+emptyStroke :: Color -> Shape
+emptyStroke c = Stroke 2 c []
+
+update :: State -> Event -> State
+update s e = match e with
+	Dummy -> s
+	Clear -> init
+	MousePressed -> {s | dragging = True}
+	MouseReleased -> {s | dragging = False, strokes = handleRelease s.strokes}
+	ColorChanged c -> {s | strokes = updateColor (head s.strokes) c:drop 1 s.strokes}
+	PixelEntered y x -> cond
+		| s.dragging -> {s | strokes = addPointToStrokes s.strokes y x}
+		| otherwise -> s
+	where
+		handleRelease ((Stroke c tups):strokes) = emptyStroke 2 c:Stroke c tups:strokes
+		addPointToStrokes (Stroke c tups:strokes) y x = (Stroke 2 c ((y,x):tups)):strokes
+		updateColor (Stroke _ _ tup) c = Stroke 2 c tup
+
+--Add centering to column next
+view :: State -> Widget
+view s = Column []<<
+	Canvas $<<
+		#{onMousePressed = \_ _ -> MousePressed, onMouseReleased = \_ _ -> MouseReleased, 
+			onMouseMoved = if s.dragging then PixelEntered else \_ _ -> Dummy}
+		700
+		500
+		s.strokes
+	Row $ (map mkColorButton [Black, Red, Purple, Blue, Green, Yellow, Pink, Orange, White])
+	where
+		mkColorButton c = Button #{bgColor = c, width = 50, height = 50} DummyWidget (ColorChanged c)

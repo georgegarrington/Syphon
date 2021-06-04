@@ -1,0 +1,144 @@
+--Static constants by convention go at the top of the file
+canvasWidth = 800
+canvasHeight = 500
+
+ballDiam = 20
+paddleWidth = 40
+paddleHeight = 200
+
+--Just how many pixels they move by on each tick 
+ballSpeed = 1
+paddleSpeed = 2
+
+--The millisecond interval of tick messages
+tickFreq = 5
+
+type State = {
+	leftPaddleTop :: Int,
+	rightPaddleTop :: Int,
+	leftPaddleState :: PaddleState,
+	rightPaddleState :: PaddleState,
+	leftScore :: Int,
+	rightScore :: Int,
+	ballY :: Int,
+	ballX :: Int,
+	ballDir :: Dir,
+	state :: GameState,
+	gen :: RandomGen
+	}
+
+type PaddleState = Stationary | GoingUp | GoingDown
+type Dir = NE | SE | SW | NW
+--As soon as either score gets to 10 then that player wins
+type GameState = Playing | Paused | Loading
+type Wall = Top | Bottom | Lft | Rght
+type Player = LeftPlayer | RightPlayer
+
+type Event 
+	= LeftPlayerUp
+	| LeftPlayerDown
+	| LeftPlayerRelease
+	| RightPlayerUp
+	| RightPlayerDown
+	| RightPlayerRelease
+	| Pause
+	| Tick
+
+@subscribe
+	onTimePassed tickFreq Tick ?<< True
+	onKeyPressed UpArrow RightPlayerUp ?<< True
+	onKeyPressed DownArrow RightPlayerDown ?<< True
+	onKeyReleased UpArrow RightPlayerRelease ?<< True
+	onKeyReleased DownArrow RightPlayerRelease ?<< True
+	onKeyPressed (KeyChar 'w') LeftPlayerUp ?<< True
+	onKeyPressed (KeyChar 's') LeftPlayerDown ?<< True
+	onKeyReleased (KeyChar 'w') LeftPlayerRelease ?<< True
+	onKeyReleased (KeyChar 's') LeftPlayerRelease ?<< True
+
+init :: State
+init = State 0 0 Stationary Stationary 0 0 400 400 NW Playing (mkRandomGen 0)
+
+update :: State -> Event -> State
+update s e = match e with
+	Tick -> handleTick s
+	LeftPlayerUp -> {s | leftPaddleState = GoingUp}
+	LeftPlayerDown -> {s | leftPaddleState = GoingDown}
+	LeftPlayerRelease -> {s | leftPaddleState = Stationary}
+	RightPlayerUp -> {s | rightPaddleState = GoingUp}
+	RightPlayerDown -> {s | rightPaddleState = GoingDown}
+	RightPlayerRelease -> {s | rightPaddleState = Stationary}
+	Pause -> {s | state = Paused}
+
+--For now just handle the paddles going up and down, implement ball stuff later
+handleTick :: State -> State
+handleTick s = let
+	goUp val = cond
+		| val - paddleSpeed < 0 -> 0
+		| otherwise -> val - paddleSpeed
+	goDown val = cond
+		| val + paddleSpeed + paddleHeight > canvasHeight -> canvasHeight - paddleHeight
+		| otherwise -> val + paddleSpeed
+	calcNewTop paddleState top = match paddleState with
+		GoingUp -> goUp top
+		GoingDown -> goDown top
+		Stationary -> top 
+	leftTop = calcNewTop s.leftPaddleState s.leftPaddleTop
+	rightTop = calcNewTop s.rightPaddleState s.rightPaddleTop
+	(uncheckedY, uncheckedX) = match s.ballDir with
+		NE -> (s.ballY - 1, s.ballX + 1)
+		SE -> (s.ballY + 1, s.ballX + 1)
+		SW -> (s.ballY + 1, s.ballX - 1)
+		NW -> (s.ballY - 1, s.ballX - 1)
+	leftBottom = leftTop + paddleHeight
+	rightBottom = rightTop + paddleHeight
+	bounce wall dir = match (wall,dir) with
+		(Top, NE) -> (SE,0,uncheckedX)
+		(Top, NW) -> (SW,0,uncheckedX)
+		(Bottom, SE) -> (NE,canvasHeight - ballDiam,uncheckedX) 
+		(Bottom, SW) -> (NW,canvasHeight - ballDiam,uncheckedX)
+		(Lft, NW) -> (NE,uncheckedY,paddleWidth)
+		(Lft, SW) -> (SE,uncheckedY,paddleWidth)
+		(Rght, NE) -> (NW,uncheckedY,canvasWidth - ballDiam - paddleWidth)
+		(Rght, SE) -> (SW,uncheckedY,canvasWidth - ballDiam - paddleWidth)
+	ballTop = s.ballY
+	ballBottom = s.ballY + ballDiam
+	ballLeft = s.ballX
+	ballRight = s.ballX + ballDiam
+	between val lowerBound upperBound = val < upperBound && val > lowerBound
+	iscLeftPad = ballLeft < paddleWidth && 
+		(between ballTop leftTop leftBottom || between ballBottom leftTop leftBottom) 
+	iscRightPad = ballRight > canvasWidth - paddleWidth &&
+		(between ballTop rightTop rightBottom || between ballBottom rightTop rightBottom)
+	iscTop = ballTop < 0
+	iscBot = ballBottom > canvasHeight
+	iscLeftWall = ballLeft < 0
+	iscRightWall = ballRight > canvasWidth
+	scoreOrNewBallInfo = cond
+		| iscLeftPad -> Right (bounce Lft s.ballDir)
+		| iscRightPad -> Right (bounce Rght s.ballDir)
+		| iscTop -> Right (bounce Top s.ballDir)
+		| iscBot -> Right (bounce Bottom s.ballDir)
+		| iscLeftWall -> Left RightPlayer
+		| iscRightWall -> Left LeftPlayer
+		| otherwise -> Right (s.ballDir, uncheckedY,uncheckedX)
+	opposite dir = match dir with
+		NW -> SE
+		SE -> NW
+		NE -> SW
+		SW -> NE
+	in
+	match scoreOrNewBallInfo with
+		Right (newDir,newY,newX) -> 
+			{s | ballDir = newDir, ballY = newY, ballX = newX, leftPaddleTop = leftTop, rightPaddleTop = rightTop}
+		Left RightPlayer -> {s | rightScore = s.rightScore + 1, 
+			ballY = 400, ballX = 400, ballDir = opposite s.ballDir}
+		Left LeftPlayer -> {s | leftScore = s.leftScore + 1,
+			ballY = 400, ballX = 400, ballDir = opposite s.ballDir}
+
+view :: State -> Widget
+view s = Column #{bgColor = Black} []<<
+	Row [Text $ toString s.leftScore, Text $ toString s.rightScore]
+	Canvas #{bgColor = Black} canvasWidth canvasHeight []<<
+		Oval White s.ballY s.ballX ballDiam ballDiam --ball will (should) be frozen in time for now :)
+		Rectangle White s.leftPaddleTop 0 paddleWidth paddleHeight
+		Rectangle White s.rightPaddleTop (canvasWidth - paddleWidth) paddleWidth paddleHeight

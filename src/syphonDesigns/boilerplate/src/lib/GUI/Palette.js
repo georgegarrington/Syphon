@@ -1,0 +1,1 @@
+export const lightGrey = "#e0e0e0"

@@ -1,0 +1,31 @@
+testing(Canvas)
+
+#emptyStroke
+
+	Black shouldReturn Stroke "#000000" 3 []
+
+#update
+
+	inputs: (State False Black [Stroke Black 3 []] []) (PixelEntered 1 2)
+	shouldReturn: State False "#000000" [Stroke "#000000" 3 [(1,2)]] []
+
+	inputs: (State False Black [Stroke Black 3 []] []) MousePressed
+	shouldReturn: State True "#000000" [Stroke "#000000" 3 []] []
+
+	inputs: (State True Black [Stroke Black 3 [(1,2),(3,4)]] []) MouseReleased
+	shouldReturn: State False "#000000" [Stroke "#000000" 3 [], Stroke Black 3 [(1,2),(3,4)]] []
+
+	inputs: (State True Black [Stroke Black 3 []] []) (ColorChanged Blue)
+	shouldReturn: State True "#0000FF" [Stroke "#0000FF" 3 []] []
+
+	inputs: (State True Blue [Stroke Blue 3 [(1,2)],Stroke Blue 3 [(3,4)]] []) Clear
+	shouldReturn: State False "#000000" [Stroke "#000000" 3 []] []
+
+	inputs: (State True Black [Stroke Blue 3 [(1,2)],Stroke Blue 3 [(3,4)]] []) Undo
+	shouldReturn: State True "#000000" [Stroke "#0000FF" 3 [(1,2)]] []
+
+	inputs: (State True Black [Stroke Black 3 []] []) Undo
+	shouldReturn: State True "#000000" [Stroke "#000000" 3 []] []
+
+	inputs: (State True Black [Stroke Black 3 []] []) Dummy
+	shouldReturn: State True "#000000" [Stroke "#000000" 3 []] []

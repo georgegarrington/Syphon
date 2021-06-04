@@ -1,0 +1,95 @@
+module Stopwatch where
+
+--The seconds and miliseconds count of the stopwatch timer, and whether it is currently stopped
+alias State = (Int, Int, Bool)
+
+type Event = Tick | Stop | Start | Reset
+
+
+{-
+So let's think about what we need to do here, we need to look
+through each branch of the expression and figure out which
+subscriptions it contains, or may contain rather
+
+We just declare what subscription variables are being used at the top
+of the funciton, initialize them all as undefined and then they
+
+So this is actually fine, all we need to do when making the subscribe
+function is look through the entire sub parse tree of the subscribe function
+and see what sub making functions are ever referenced and put them at the top of 
+the subscription making function, and then in the bottom return bit of the react bit
+e.g. clearInterval, any subscriptions that are referenced anywhere in the parse
+tree of the subscription generating function have their associated stop handling functions
+at the end there anyway in the return bit like clearInterval
+
+And then whenever we see e.g. a time generating sub function like onPassed,
+we just assign it to the variable $time which we know will be handled
+
+Using a list would not be good so using the optional data structure
+here is a much more practical way to do it, and also a way to show it off!
+
+Due to a limitation with how React handles concurrency, you can only ever
+have one active subscription at a time
+
+-}
+
+#You can only ever have one subscription for something at a time
+#e.g. one subscription to time, one subscription to mouse moves etc.
+subscribe :: State -> Sub
+subscribe (_,_,stopped)
+	| stopped = NoSub
+	| otherwise = onPassed 10 Tick
+
+--The stopwatch should technichally only ever increment when it is not stopped so technically 
+--this could never happen whilst the watch is stopped!
+update :: State -> Event -> State
+update (secs, milis, stopped) e = match e with
+	Tick -> cond
+		| milis == 100 -> (secs + 1, 0, stopped)
+		| otherwise -> (secs, milis + 1, stopped)
+	Stop -> (secs, milis, False)
+	Start -> (secs, milis, True)
+	Reset -> (0, 0, stopped)
+
+view :: State -> Widget
+view (secs, milis, stopped) = Column []<<
+	Text $<<
+		#{align = Center, size = 15, bold = True, color = if stopped then C.red else C.green}
+		let secsStr = toString secs
+		let miliString = if milis < 10 then toString milis ++ ['0'] else toString milis
+	Row #{align = Equal} []<<
+		Button (Text "Start") Start
+		Button (Text "Stop") Stop
+		Button (Text "Reset") Rest 
+
+
+
+
+alias State = (Int, Int, Bool)
+
+type Event = Tick | Stop | Start | Reset
+
+subscribe :: State -> Sub
+subscribe (_,_,stopped)
+	| stopped = NoSub
+	| otherwise = onPassed 10 Tick
+
+update :: State -> Event -> State
+update (secs, milis, stopped) e = match e with
+	Tick -> cond
+		| milis == 100 -> (secs + 1, 0, stopped)
+		| otherwise -> (secs, milis + 1, stopped)
+	Stop -> (secs, milis, False)
+	Start -> (secs, milis, True)
+	Reset -> (0, 0, stopped)
+
+view :: State -> Widget
+view (secs, milis, stopped) = Column []<<
+	Text $<<
+		#{align = Center, size = 15, bold = True, color = if stopped then C.red else C.green}
+		let secsStr = toString secs
+		let miliString = if milis < 10 then toString milis ++ ['0'] else toString milis
+	Row #{align = Equal} []<<
+		Button (Text "Start") Start
+		Button (Text "Stop") Stop
+		Button (Text "Reset") Rest 

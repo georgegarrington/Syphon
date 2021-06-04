@@ -1,0 +1,34 @@
+alias Operator = Int -> Int -> Int
+
+type State = 
+	{
+	display :: String,
+	operator :: Operator,
+	operand1 :: Int
+	}
+
+type Event = Clear | Eq | OpPress Operator | Digit Int
+
+--Use plus as a "dummy" opterator
+init :: State
+init = State "" (+) 0
+
+update :: State -> Event -> State
+update s e = match e with
+	Clear -> init
+	Eq -> State (calc s) (+) 0
+	OpPress op -> State "" op $ parseInt s.display
+	Digit i -> {s | display = append s.display (toString i)}
+	where
+		calc st = toString (st.operator st.operand1 (parseInt st.display))
+
+view :: State -> Widget
+view s = Column []<<
+	Container #{dim = (275,35), bgColor = Grey} $ Text s.display
+	Row $ (map mkDigitButton [7..9]) ++ [Button (Text "X") (OpPress (*))]
+	Row $ (map mkDigitButton [4..6]) ++ [Button (Text "/") (OpPress (/))]
+	Row $ (map mkDigitButton [1..3]) ++ [Button (Text "-") (OpPress (-))]
+	Row [mkDigitButton 0, Button (Text "AC") Clear, Button (Text "=") Eq, 
+		Button (Text "+") (OpPress (+))]
+	where
+		mkDigitButton i = Button (Text $ toString i) (Digit i)

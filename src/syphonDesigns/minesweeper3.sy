@@ -1,0 +1,130 @@
+--You already have the random position generation code from the other
+--prototype so just use that :)
+
+
+{-} \cell -> match cell with << MAYBE ABIT TOOOO FANCY?
+		Revealed _ -> True
+		_ -> False  GOES BELOW IN FILTER BIT-}
+
+
+type State = 
+	{
+	grid :: [[CellState]],
+	bombCoords :: [(Int,Int)],
+	gameState :: GameState,
+	gen :: Maybe RandomGen
+	}
+
+--Add support for generic adts e.g. Matrix a instead of 2d list of cell states
+
+type CellState = Hidden | Revealed Int | Flagged | Exploded
+type GameState = Playing | Won | Lost | Loading
+type Event = LeftClick Int Int | RightClick Int Int | Reset | SeedRecieved Int
+
+initEffect :: Effect
+initEffect = requestSeed SeedRecieved
+
+--Create a 10x10 grid of hidden cells
+init :: State
+init = State (replicateGrid 10 Hidden) [] Loading Nothing --RANDOM STUFF GOES HERE
+
+update :: State -> Event -> State
+update s e = match e with
+	SeedRecieved seed -> let --{s | gen = Just $ mkRandomGen seed, }
+		initGen = mkRandomGen seed
+		(ranCoords, newGen) = genBombCoords initGen 10
+		in
+		{s | gen = Just newGen, bombCoords = ranCoords, gameState = Playing}
+	Flagged y x -> match index2D s.grid y x with
+		Hidden -> {s | grid = replace2D s.grid y x Flagged}
+		Flagged -> {s | grid = replace2D s.grid y x Hidden}
+		Revealed _ -> s
+	Clicked y x -> match index2D s.grid y x with
+		Hidden -> match bombOrCount s.bombCoords (y,x) with
+			Nothing -> {s | grid = replace2D s.grid y x Exploded, gameState = Lost}
+			Just count -> let 
+				newGrid = replace2D s.grid y x $ Revealed count 
+				in 
+				cond
+					| checkWon newGrid -> {s | grid = replace2D s.grid y x $ Revealed count, gameState = Won}
+					| otherwise -> {s | grid = replace2D s.grid y x $ Revealed count}
+		Flagged -> s
+		Revealed _ -> s
+	Reset -> let
+		(ranCoords, newGen) = genBombCoords s.gen 10
+		in
+		State (replicateGrid 10 Hidden) ranCoords Playing (Just newGen)
+		--PUT RANDOM GEN STUFF HERE
+
+genBombCoords :: RandomGen -> Int -> ([(Int, Int)], RandomGen)
+genBombCoords gen n = genBombCoordsHelper gen []
+
+genBombCoordsHelper :: RandomGen -> Int -> [(Int,Int)] -> ([(Int,Int)],RandomGen)
+genBombCoordsHelper gen 0 acc = (acc,gen) 
+genBombCoordsHelper gen n acc = cond
+	| containsCoord acc ranCoord -> genBombCoordsHelper 2ndgen n acc
+	| otherwise -> genBombCoordsHelper 2ndgen (n - 1) (ranCoord:acc)
+	where
+		(gen1, y) = randomIntBetween 0 9 gen
+		(gen2, x) = randomIntBetween 0 9 gen1
+		ranCoord = (fstgen,gen2)
+
+containsCoord :: [(Int,Int)] -> (Int,Int) -> Bool
+containsCoord [] _ = False
+containsCoord ((y,x):rest) (qy,qx) = cond
+	| qy == y && qx == x -> True
+	| otherwise -> containsCoord rest (qy,qx)
+
+--If nothing then its a bomb, if just then its a count
+bombOrCount :: [(Int,Int)] -> (Int, Int) -> Maybe Int
+bombOrCount ((bombY,bombX):bombs) (coordY,coordX) = cond
+	| diffY == 0 && diffX == 0 -> Nothing --Bomb! :O
+	| diffY <= 1 && diffX <= 1 -> plusMaybe 1 $ bombOrCount bombs (coordY,coordX)
+	| otherwise -> bombOrCount bombs (coordY, coordX)
+	where
+		diffY = abs $ bombY - coordY
+		diffX = abs $ bombX - coordX
+		plusMaybe x mayb = match mayb with
+			Nothing -> Nothing
+			Just y -> Just $ x + y
+
+checkWon :: [[CellState]] -> Bool
+checkWon = pipeline 
+	grid
+	filter2D $ \cell -> match cell with
+		Revealed -> True
+		_ -> False
+	concat
+	length 
+	\result -> result == 90
+
+view :: State -> Widget
+view s = Column #{alignment = Centered} []<<
+	Button resetIcon Reset
+	map (\y -> makeButtonList s.gameState y 0 (s.grid !! y)) [0..9]
+
+makeButtonList :: GameState -> Int -> Int -> [CellState] -> [Widget]
+makeButtonList _ _ _ [] = []
+makeButtonList gameState y x (cellState:states) = (:) $<<
+	match cellState with
+		Hidden -> Button $<<
+			#{width = 50, height = 50, onRightClick = RightClick y x, bgColor = LightGrey}
+			DummyWidget
+			LeftClick y x
+		Revealed count -> Container $<<
+			#{width = 50, height = 50, bgColor = LightGrey, alignment = Centered}
+			match count with
+				0 -> DummyWidget
+				_ -> Text #{color = Red} (toString count)
+		Flagged -> Button $<<
+			#{width = 50, height = 50, onRightClick = RightClick y x} 
+			flagGraphic
+			LeftClick y x 
+		Exploded -> Container $<<
+			#{width = 50, height = 50, bgColor = Red} 
+			mineGraphic
+	makeButtonList gameState y (x + 1) states
+	where
+		disabled = match st with
+			Playing -> False
+			_ -> True 

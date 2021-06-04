@@ -1,0 +1,59 @@
+{-
+Syphon's random generator is reproducible and pure, however it is truly random
+in the sense that functions that generate random values return a new random generator
+whose behaviour cant be predicted. However to prove reproducability, you
+can see coordsA should be the same return vaue as the first test case with
+both using the seed 0 to make the initial random generator, so checking
+for equivalence between these will prove reproducability of randomness
+-}
+
+#genBombCoordsRec
+
+	let coordsA = genBombCoordsRec (mkRandomGen 0) 10 []
+	let sameTups zippedTups = 
+		and $ map (\((y1,x1),(y2,x2)) -> y1 == y2 && x1 == x2) zippedTups
+
+	--We don't care about the returned random generator so wildcard match it
+	args: (mkRandomGen 0) 10 []
+	
+	shouldSatisfy: \(bombCoords,_) -> and []<<
+		length coordsA == 10
+		length coordsA == length bombCoords
+		sameTups $ zip bombCoords coordsA
+		--COME UP WITH A WAY TO TEST UNIQUENESS
+
+#containsCoord
+
+	args: [(1,2),(3,4)] (3,4)
+	shouldReturn: True
+
+	args: [(1,2),(3,4)] (5,4)
+	shoudlReturn: False
+
+	args: [] (1,2)
+	shoudlReturn: False
+
+#bombOrCount
+
+	args: [(0,0),(5,3),(6,7)] (6,7)
+	shouldReturn: Nothing
+
+	args : [(0,0),(0,1),(5,3),(6,7)] (1,1)
+	shouldReturn: Just 2
+
+--Work with a 4x4 grid to make things easier
+let templateState = State (replicate2D 10 Hidden) [(0,0)] Playing (mkRandomGen 0)
+
+#update
+
+	args: templateState (LeftClick 0 0)
+	shouldSatisfy: \state -> state.gameState is Lost && (index2D s.grid 0 0 is Exploded)
+
+	args: templateState (LeftClick 1 1)
+	shouldSatisfy: \state -> index2D state.grid 1 1 is Revealed 1
+
+	args: templateState {grid = replace (replicate2D 10 $ Revealed 0) 0 (replicate 10 Hidden)} (LeftClick 1 1)
+	shouldSatisfy: \state -> state.gameState is Won
+
+	args: templateState (RightClick 1 1)
+	shouldSatisfy: \state -> index2D state.grid 1 1 is Flagged

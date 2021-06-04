@@ -1,0 +1,36 @@
+type State = {
+	saveField :: String,
+	loadField :: String,
+	contents :: String
+	}
+
+type Event 
+	= LoadPressed 
+	| SavePressed 
+	| FileRead String 
+	| LoadUpdated String
+	| SaveUpdated String 
+	| EditorTyped String
+
+init :: State
+init = State "" "" ""
+
+effect :: State -> Event -> Effect
+effect s e = match e with
+	LoadPressed -> readFile s.loadField FileRead
+	SavePressed -> writeFile s.saveField s.contents
+	_ -> NoEffect
+
+update :: State -> Event -> State
+update s e = match e with
+	EditorTyped str -> {s | contents = str}
+	LoadUpdated str -> {s | loadField = str}
+	SaveUpdated str -> {s | saveField = str}
+	FileRead str -> {s | contents = str}
+	_ -> s
+
+view :: State -> Widget
+view s = Column #{gap = 10} []<< 
+	Row [TextField "Load directory" LoadUpdated, Button (Text "load from path") LoadPressed]
+	Row [TextField "Save directory" SaveUpdated, Button (Text "save to path") SavePressed]
+	TextEditor s.contents 30 40 EditorTyped

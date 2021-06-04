@@ -1,0 +1,63 @@
+module Minesweeper where
+
+{-
+Each time a new random value is generated (or random values), put 
+the resulting changed random generator back in the state.
+
+For now, whenever a random generator is used, it is given an initial
+seed for the generator through impure IO which is permitted by Javascript,
+but in the future I would look to make this more pure and have the random IO
+value be sent to the update function
+-}
+
+bombIcon = Image $ impureImg "bomb.png"
+flagIcon = Image $ impureImg "flag.png"
+
+type State = {
+	grid :: [[CellInfo]],
+	randomGen :: Gen
+}
+
+--The coordinates of the cell, whether it has been clicked, whether it has a bomb 
+--and also whether it has been flagged or not
+type CellInfo = CellInfo (Int, Int) Bool Bool Bool
+
+type Event = Clicked (Int, Int) | Flagged (Int, Int)
+
+init :: State
+init = State withBombs gen2
+	where
+		--twoD map just does map . map on a 2D list
+		noBombs = twoDmap (\coords -> CellInfo coords False False False) (genCoordGrid 30)
+
+		--generate n integers between the second and third arguments, each random number is unique
+		--mkRandomGen is the impure IO function that gets an initial seed from IO to make an initial random generator, 
+		--however every subsequent random generation is pure as it is based on the seed that mkRandomGen provides
+
+		(gen1, xCoords) = randomUniqsBetween mkRandomGen 10 0 29
+		(gen2, yCoords) = randomUniqsBetween gen1 10 0 29
+		coords = zip yCoords xCoords
+		bombCoords =  zip (randomsBetween 10 0 29) (randomsBetween 10 0 29)
+		withBombs = addBombs bombCoords noBombs
+
+--Given a dimension N, generate a square coordinate grid containing tuples of the coordinates
+genCoordGrid :: Int -> [[(Int, Int)]]
+genCoordGrid n = map (y -> map (x -> (y,x)) [0..(n-1)]) [0..(n-1)]
+
+--Use an accumulator to build up the grid with bombs from the list of bomb coordinates and the initial grid information
+addBombs :: [(Int, Int)] -> [[(Int, Int)]] -> [[(Int, Int)]]
+addBombs [] grid = grid
+addBombs ((y,x):bombCoords) grid = addBombs bombCoords (replace2D grid y x (CellInfo (y,x) False True False))
+
+view :: State -> Widget
+view s = Column $ Row $ map mkCellRow s.grid
+	where
+
+mkCellRow :: [CellInfo] -> [Widget]
+mkCellRow [] = []
+		mkCellRow (CellInfo coords clicked bomb flagged)
+			| clicked && bomb = Button
+			| 
+
+mkCell :: Widget -> Widget
+mkCell contents = 

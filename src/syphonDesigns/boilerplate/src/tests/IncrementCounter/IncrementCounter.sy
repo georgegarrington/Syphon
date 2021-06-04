@@ -1,0 +1,8 @@
+alias State = Int
+
+type Event = Inc | Dec
+
+update :: State -> Event -> State
+update s e = match e with
+	Inc -> s + 1
+	Dec -> s - 1

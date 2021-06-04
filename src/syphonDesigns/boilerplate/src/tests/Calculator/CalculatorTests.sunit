@@ -1,0 +1,24 @@
+testing(Calculator)
+
+{-
+We cannot check for equality of functions, we cannot verify if the
+return result is the "+" function for example. But, what we can do instead
+is do a sort of mini "proof by induction", if we feed the output of update with
+the arguments we want to test (State "" (+) 0) Clear (so, creates a new state),
+and then update working on this creates something that has the same fields
+then we can be confident that it works. Likewise, if the test case with the
+(Digit 2) argument passes resulting in a state with "12" in its display field,
+then we know for certain that update with these arguments will produce a state
+with a non empty display field string, so we can feed this whole expression
+as an argument into the OpPress case and know for certain that it is making the string
+be empty as the string was definitely non empty before.
+-}
+
+#update
+	(update (State "" (+) 0) Clear) Clear shouldReturn (State "" fn 0)
+	(State "1" (+) 2) Eq shouldReturn (State "3" fn 0)
+	(State "1" (-) 2) Eq shouldReturn (State "1" fn 0)
+	(State "3" (*) 4) Eq shouldReturn (State "12" fn 0)
+	(State "5" (/) 5) Eq shouldReturn (State "1" fn 0)
+	(State "1" (+) 0) (Digit 2) shouldReturn (State "12" fn 0) 
+	(update (State "1" (+) 0) (Digit 2)) (OpPress (+)) shouldReturn (State "" fn 12)

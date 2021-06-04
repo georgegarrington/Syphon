@@ -1,0 +1,162 @@
+let templateState = State 0 0 Stationary Stationary 0 0 0 0 NW Playing
+let leftPlayerGoingUp = {templateState | leftPaddleState = GoingUp}
+let rightPlayerGoingUp = {templateState | rightPaddleState = GoingUp}
+
+#update
+	
+	args: templateState LeftPlayerUp
+	shouldSatisfy: \state -> state.leftPaddleState is GoingUp
+
+	args: templateState LeftPlayerDown
+	shouldSatisfy: \state -> state.leftPaddleState is GoingDown
+
+	args: templateState RightPlayerUp
+	shouldSatisfy: \state -> state.rightPaddleState is GoingUp
+
+	args: templateState RightPlayerDown
+	shouldSatisfy: \state -> state.rightPaddleState is GoingDown
+
+	args: leftPlayerGoingUp LeftPlayerRelease
+	shouldSatisfy: \state -> state.leftPaddleState is Stationary
+
+	args: rightPlayerGoingUp RightPlayerRelease
+	shouldSatisfy: \state -> state.rightPaddleState is Stationary
+
+	args: templateState Pause
+	shouldSatisfy: \st -> st.state is Paused
+
+#handleTick
+
+	let leftAtTop = leftPlayerGoingUp
+	let rightAtTop = rightPlayerGoingUp
+	let leftLegalUp = {leftPlayerGoingUp | leftPaddleTop = 200}
+	let rightLegalUp = {rightPlayerGoingUp | rightPaddleTop = 200}
+	let leftLegalDown = {leftLegalUp | leftPaddleState = GoingDown}
+	let rightLegalDown = {rightLegalUp | rightPaddleState = GoingDown}
+	let leftAtBottom = {leftLegalDown | leftPaddleTop = canvasHeight - paddleHeight}
+	let rightAtBottom = {rightLegalDown | rightPaddleTop = canvasHeight - paddleHeight}
+
+	args: leftAtTop 
+	shouldSatisfy: \st -> (&&)
+		st.leftPaddleTop == leftAtTop.leftPaddleTop
+		st.leftPaddleState is GoingUp
+
+	args: rightAtTop
+	shouldSatisfy: \st -> (&&)
+		st.rightPaddleTop == rightAtTop.rightPaddleTop
+		st.rightPaddleState is GoingUp
+	
+	args: leftLegalUp
+	shouldSatisfy: \st -> 
+		(leftLegalUp.leftPaddleTop - paddleSpeed) == 
+		st.leftPaddleTop
+	
+	args: leftLegalDown
+	shouldSatisfy: \st -> 
+		(leftLegalDown.leftPaddleTop + paddleSpeed) ==
+		st.leftPaddleTop
+	
+	args: rightLegalUp
+	shouldSatisfy: \st ->
+		(rightLegalUp.rightPaddleTop - paddleSpeed) = 
+		st.rightPaddleTop
+
+	args: rightLegalDown
+	shouldSatisfy: \st ->
+		(rightLegalDown.rightPaddleTop + paddleSpeed) ==
+		st.rightPaddleTop
+	
+	args: leftAtBottom
+	shouldSatisfy: \st -> (&&)
+		st.leftPaddleTop == leftAtBottom.leftPaddleTop
+		st.leftPaddleState is GoingDown
+
+	args: rightAtBottom
+	shouldSatisfy: \st -> (&&)
+		st.rightPaddleTop == rigthAtBottom.rightPaddleTop
+		st.rightPaddleState is GoingDown
+
+	//Now do tests for the ball
+	let iscTopNW = {templateState | dir = NW}
+	let iscTopNE = {templateState | dir = NE}
+	let iscBotSE = {templateState | dir = SE}
+	let iscBotSW = {templateState | dir = SW}
+	let iscLeftPadNW = {leftLegalUp | dir = NW}
+	let iscLeftPadSW  = {leftLegalUp | dir = SW}
+	let iscRightPadNE = {rightLegalUp | dir = NE}
+	let iscRightPadSE = {rightLegalUp | dir = SE}
+	let iscLeftWallNW = {leftLegalUp | dir = NW}
+	let iscLeftWallSW = {leftLegalUp | dir = SW}
+	let iscRightWallNE = {rightLegalUp | dir = NE}
+	let iscRightWallSE =  {rightLegalUp | dir = SE}
+
+	args: iscTopNW
+	shouldSatisfy: \st -> (st.ballX == iscTopNW.ballX && st.ballY == 0) && st.dir is SW
+
+	args: iscTopNE
+	shouldSatisfy: \st -> (st.ballX == iscTopNW.ballX && st.ballY == 0) && st.dir is SE
+
+	args: iscBotSE
+	shouldSatisfy: \st -> (st.ballX == iscBotSE.ballX && st.ballY == (canvasHeight - ballDiam)) && st.dir is NE
+
+	args: iscBotSW
+	shouldSatisfy: \st -> (st.ballX == iscBotSW.ballX && st.ballY == (canvasHeight - ballDiam)) && st.dir is NW
+
+	args: iscLeftPadNW
+	shouldSatisfy: \st -> (st.ballY == iscLeftPadNW.ballY && st.ballX == ballDiam) && st.dir is NE
+
+	args: iscLeftPadSW
+	shouldSatisfy: \st -> (st.ballY == iscLeftPadSW.ballY && st.ballX == ballDiam) && st.dir is SE
+
+	args: iscRightPadNE
+	shouldSatisfy: \st -> (st.ballY == iscRightPadNE.ballY && st.ballX == (canvasWidth - ballDiam)) && st.dir is NW
+
+	args: iscRightPadSE
+	shouldSatisfy: \st -> (st.ballY == iscRightPadSE.ballY && st.ballX == (canvasWidth - ballDiam)) && st.dir is SW
+
+	args: iscLeftWallNW
+	shouldSatisfy: \st -> st.rightScore + 1 == iscLeftWallNW.rightScore
+
+	args: iscLeftWallSW
+	shouldSatisfy: \st -> st.rightScore + 1 == iscLeftWallSW.rightScore
+
+	args: iscRightWallNE
+	shouldSatisfy: \st -> st.leftScore + 1 == iscRightWallNW.leftScore
+
+	args: iscRightWallSE
+	shouldSatisfy: \st -> st.leftScore + 1 == iscRightWallSE.leftScore
+
+	let inCenterNW = {templateState | ballY = 400, ballX = 400}
+	let inCenterNE = {inCenterNW | dir = NE}
+	let inCenterSE = {inCenterNW | dir = SE}
+	let inCenterSW = {inCenterNW | dir = SW}
+
+	let calcBallTick oldY oldX dir = match dir with
+		NW -> (oldY - ballSpeed, oldX - ballSpeed)
+		NE -> (oldY - ballSpeed, oldX + ballSpeed)
+		SE -> (oldY + ballSpeed, oldX + ballSpeed)
+		SW -> (oldY + ballSpeed, oldX - ballSpeed)
+
+	args: inCenterNW
+	shouldSatisfy: \st -> let
+		(expectedY, expectedX) = calcBallTick inCenterNW.ballY inCenterNW.ballX
+		in
+		st.ballY == expectedY && st.ballX == expectedX
+
+	args: inCenterNE
+	shouldSatisfy: \st -> let
+		(expectedY, expectedX) = calcBallTick inCenterNE.ballY inCenterNE.ballX
+		in
+		st.ballY == expectedY && st.ballX == expectedX
+
+	args: inCenterSE
+	shouldSatisfy: \st -> let
+		(expectedY, expectedX) = calcBallTick inCenterSE.ballY inCenterSE.ballX
+		in
+		st.ballY == expectedY && st.ballX == expectedX
+
+	args: inCenterSW
+	shouldSatisfy: \st -> let
+		(expectedY, expectedX) = calcBallTick inCenterSW.ballY inCenterSW.ballX
+		in
+		st.ballY == expectedY && st.ballX == expectedX
