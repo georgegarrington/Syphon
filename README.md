@@ -71,7 +71,7 @@ view s = Column []<<
 
 - **Type Inference**
 
-	-Type system based on Hindley-Milner Algorithm W
+	- Type system based on Hindley-Milner Algorithm W
 
 - **Helpful static analysis** 🔎
 
