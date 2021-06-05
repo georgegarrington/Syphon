@@ -21,6 +21,7 @@ update s e = match e with
 	Inc -> s + 1
 	Dec -> s - 1
 
+--Multiline list syntax sugar
 view :: State -> Widget
 view s = Column []<<
 	Button (Text "+") Inc
