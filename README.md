@@ -6,7 +6,7 @@ A functional, minimalist MVU based language for creating Desktop GUI apps powere
 
 - **Zero boilerplate** 🚫
 
-👾 Just plug 'n' play! No main function, only update and view. Ideal for smaller projects. Example of a complete program:
+👾 Just plug 'n' play! No main function, the core logic of all programs comes from the definitions of init, update and view. Ideal for smaller projects. Example of a complete program:
 	
 ```
 alias State = Int
