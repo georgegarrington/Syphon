@@ -83,7 +83,7 @@ view s = Column []<<
 - **Functional purity** 😇
 
 	- Explicit state management improves referential transparency and reduces the likelihood of illegal states
-	- Side effects are only permitted from view and update
+	- Side effects are only permitted from the system primitive definitions initEffects and effect
 	- Ideal environment for beginners to learn functional programming applied to GUIs
 - **Quirky syntax features** 🍭
 
