@@ -34,7 +34,7 @@ view s = Column []<<
     Button (Text "-") Dec
 ```
 
-Minimalist syntax and zero boilerplate means programs are generally very small and easy to reason about:
+Minimalist syntax and zero boilerplate means programs are generally very small and easy to reason about. Here is a simple calculator program, the logic should be clear:
 
 ```
 --Calculator.sy
@@ -74,53 +74,29 @@ view s = Column []<<
         mkDigitButton i = Button (toString i) (DigitPressed i)
 ```
 
-- **Trait polymorphism** 📦🔧
-
-	- Also known as typeclasses (show example)
-```
-trait Mappable m where
-
-    map :: (a -> b) -> m a -> m b
-    
-[] exhibits Mappable where
-
-    map _ [] = []
-    map f (x:xs) = (f x):map f xs
-```
-
 - **Type Inference**
 
-	- Powerful type system based on the Hindley-Milner Algorithm W
+	-Type system based on Hindley-Milner Algorithm W
 
-- **Helpful static analysis** 🔎 (picture examples)
-
-- **Hot reload** 🔥
-
-- **Time travelling debugger** ⏱
+- **Helpful static analysis** 🔎
 
 - **Cross platform** 💻
 
 	- CLI transpiler written in Haskell 
 	- Produces React based Electron apps
 	
-- **Functional purity** ƒ 😇
+- **Functional purity** 😇
 
 	- Explicit state management improves referential transparency and reduces the likelihood of illegal states
 	- Side effects are only permitted from view and update
 	- Ideal environment for beginners to learn functional programming applied to GUIs
-- **Quirky syntax features** 🍭(e.g. ? operator, [] <- multiline list, optional data type etc, conditional operator)
+- **Quirky syntax features** 🍭
 
 - **Performance** 🚀
 
 	- Widgets automatically detect if they need to be re-rendered based on the part of the state they display and checking it for changes
 	- Harness the power of the React Virtual DOM algorithm
-	- (Show picture of paint application)
 
-- **Tabsss** 😱
-
-	- Controversial, maybe a dealbreaker
-	- Support for space indentation can be implemented in future depending on backlash, although I would argue tabs work quite well for the given domain
-	
 - **A labour of love** 💜
 
 	- My final year project at The University of Southampton. My dissertation on Syphon can be found **here**
@@ -143,8 +119,4 @@ trait Mappable m where
 
 - An alternative implementation targetting a different platform such as creating **Flutter smartphone apps**
 	- The syntax is designed to be fairly general on purpose with this future goal in mind!
-- Lazy evaluation language primitive tool
-
-
-helped by the built-in "optional" data structure, where all fields are optional and have default values.
-(Example with graphic of changing the style using optional) (Example of showing default style values and not providing the values so the default values are assumed, along with a graphic)
+- Lazy evaluation language primitive
