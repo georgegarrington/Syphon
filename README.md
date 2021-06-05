@@ -58,6 +58,7 @@ update s e = match e with
 
 view :: State -> Widget
 view s = Column []<<
+	--Optional structures allow tweaking properties of GUI widgets
 	Container #{dim = (275,35), bgColor = Grey} $ Text s.display
 	Row $ (map mkDigitButton [7..9]) ++ [Button (Text "X") (OpPress (*))]
 	Row $ (map mkDigitButton [4..6]) ++ [Button (Text "/") (OpPress (/))]
