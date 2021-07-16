@@ -29,7 +29,7 @@ view s = Column []<<
 	Button (Text "-") Dec
 ```
 
-Minimalist syntax and zero boilerplate means programs are generally very small and easy to reason about. Here is a simple calculator program, the logic should be clear:
+Minimalist syntax and zero boilerplate means programs are generally very small and easy to reason about. Here is a simple calculator program, the logic should be clear to follow:
 
 ```
 alias Operator = Int -> Int -> Int
