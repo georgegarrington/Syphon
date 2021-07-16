@@ -94,7 +94,7 @@ view s = Column []<<
 
 - **A labour of love** 💜
 
-	- My final year project at The University of Southampton. My dissertation on Syphon can be found **here**
+	- My final year project at The University of Southampton. If you are interested, have a read of my dissertation PDF
 	- Currently searching for a software engineering role in the UK and open to offers of employment :)
 
 ## Usage
