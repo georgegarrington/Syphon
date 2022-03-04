@@ -25,7 +25,7 @@ essentials =
 		\import {$add,$sub,$mul,$div,$mod,$and,$or,not,$eq,$nEq,$gt,$lt,$gtEq,$ltEq,append,$listGen,\n\
 		\\tJust, Nothing, _Just, _Nothing, $Unit, $_Unit, fst, snd, $keyExprToCode, _UpArrow, _DownArrow, _LeftArrow, \n\
 		\\t_RightArrow, _KeyChar, Left, Right, _Left, _Right, mkRandomGen, randomGenBetween, abs, requestSeed,\n\
-		\\treadFile, writeFile, useSyphon, NoEffect, _NoEffect} from \"./lib/Hardwired/Core.js\"\n\
+		\\tuseSyphon, NoEffect, _NoEffect} from \"./lib/Hardwired/Core.js\"\n\
     \import {_Button} from \"./lib/GUI/Button.js\"\n\
     \import {_Text, _TextEditor, _TextField} from \"./lib/GUI/Text.js\"\n\
 		\import {_Graphic, _Container, _Panel} from \"./lib/GUI/Misc.js\"\n\

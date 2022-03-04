@@ -46,5 +46,5 @@ main = do
 					pPrint $ tests
 					return $ writeRunSUnit tests mod
 		_ -> return ""
-	transpile "syphonDesigns/boilerplate/src/App.js" mod extra
+	transpile "App.js"{-"syphonDesigns/boilerplate/src/App.js"-} mod extra
 	printTitle "TRANSPILATION SUCCESSFUL."
